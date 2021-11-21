@@ -74,12 +74,9 @@ def populate_tables(acidente, localidade, pessoa, tipo_acidente, causa_acidente,
     """Insert data in all the tables, after cleaning it.
     """
     
-    push_to_db('heroku_aba902d59bebc6b', 'acidente', acidente)
-    push_to_db('heroku_aba902d59bebc6b', 'localidade', localidade)
-    push_to_db('heroku_aba902d59bebc6b', 'pessoa', pessoa)
-    push_to_db('heroku_aba902d59bebc6b', 'tipo_acidente', tipo_acidente)
-    push_to_db('heroku_aba902d59bebc6b', 'causa_acidente', causa_acidente)
-    push_to_db('heroku_aba902d59bebc6b', 'veiculo', veiculo)
+    list(map(push_to_db, ['heroku_aba902d59bebc6b'] * 6,
+             ['acidente', 'localidade', 'pessoa', 'tipo_acidente', 'causa_acidente', 'veiculo'],
+             [acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo]))
     
     
 def create_tables():
@@ -124,11 +121,11 @@ def create_tables():
                     longitude FLOAT(10, 10),
                     uf VARCHAR(2),
                     municipio VARCHAR(60),
-                    br INT(3),
+                    br FLOAT(5, 5),
                     km FLOAT(5, 5),
                     tipo_pista VARCHAR(60),
                     tracado_via VARCHAR(60),
-                    uso_solo VARCHAR(60),
+                    uso_solo BOOLEAN,
                     regional VARCHAR(60),
                     delegacia VARCHAR(60),
                     uop VARCHAR(60)
@@ -160,7 +157,7 @@ def create_tables():
                     id_acidente INT(10),
                     id_pessoa INT(10),
                     causa_acidente VARCHAR(60),
-                    causa_principal BOOL
+                    causa_principal BOOLEAN
                     )""")
 
     cursor.execute("""
@@ -198,8 +195,8 @@ def restructure_data(por_pessoa_todos_tipos, por_pessoa, por_ocorrencia):
     
     por_ocorrencia = por_ocorrencia[['id', 'pessoas', 'mortos', 'feridos_leves', 'feridos_graves', 'ilesos', 'ignorados', 'feridos', 'veiculos']]
     por_ocorrencia = por_ocorrencia.rename(columns={'pessoas': 'qtd_pessoas', 'mortos': 'qtd_mortos', 'feridos_leves': 'qtd_feridos_leves',
-                                'feridos_graves': 'qtd_feridos_graves', 'ilesos': 'qtd_ilesos', 'ignorados': 'qtd_ignorados',
-                                'feridos': 'qtd_feridos', 'veiculos': 'qtd_veiculos'})
+                                                    'feridos_graves': 'qtd_feridos_graves', 'ilesos': 'qtd_ilesos', 'ignorados': 'qtd_ignorados',
+                                                    'feridos': 'qtd_feridos', 'veiculos': 'qtd_veiculos'})
 
     por_pessoa = por_pessoa[['pesid', 'nacionalidade', 'naturalidade']]
 
@@ -226,7 +223,8 @@ def format_data(df):
     df.latitude = pd.to_numeric(df.latitude.str.replace(',', '.'))
     df.longitude = pd.to_numeric(df.longitude.str.replace(',', '.'))
     df.causa_principal = df.causa_principal.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
-
+    df.uso_solo = df.uso_solo.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
+    
     df.br = pd.to_numeric(df.br)
     df.idade = pd.to_numeric(df.idade)
     df.ano_fabricacao_veiculo = pd.to_numeric(df.ano_fabricacao_veiculo)
@@ -244,17 +242,19 @@ def split_dataframes(df):
     """
     
     acidente = df[['id_acidente', 'id_pessoa', 'id_veiculo', 'data', 'dia_semana', 'horario', 'classificacao_acidente', 
-                'fase_dia', 'sentido_via', 'condicao_metereologica', 'qtd_pessoas', 'qtd_mortos', 'qtd_feridos_leves', 
-                'qtd_feridos_graves', 'qtd_ilesos', 'qtd_ignorados', 'qtd_feridos', 'qtd_veiculos']]
+                   'fase_dia', 'sentido_via', 'condicao_metereologica', 'qtd_pessoas', 'qtd_mortos', 'qtd_feridos_leves', 
+                   'qtd_feridos_graves', 'qtd_ilesos', 'qtd_ignorados', 'qtd_feridos', 'qtd_veiculos']]
 
     localidade = df[['id_acidente','latitude', 'longitude', 'uf', 'municipio', 'br', 'km', 'tipo_pista', 'tracado_via', 'uso_solo', 'regional', 'delegacia', 'uop']]
-    localidade = localidade.assign(id_local=range(1, len(localidade)+1))
-
+    # localidade = localidade.assign(id_local=range(1, len(localidade)+1))
+    localidade.insert(0, 'id_local', range(1, len(localidade)+1))
+    
     pessoa = df[['id_pessoa', 'idade', 'sexo', 'nacionalidade', 'naturalidade', 'tipo_envolvido', 'estado_fisico']].drop_duplicates()
 
     tipo_acidente = df[['id_acidente', 'id_pessoa', 'tipo_acidente', 'ordem_tipo_acidente']]
     tipo_acidente = tipo_acidente.assign(id_tipo=range(1, len(tipo_acidente)+1))
-
+    # tipo_acidente.insert(0, 'id_tipo', range(1, len(tipo_acidente)+1))
+                                         
     causa_acidente = df[['id_acidente', 'id_pessoa', 'causa_acidente', 'causa_principal']]
     causa_acidente = causa_acidente.assign(id_causa=range(1, len(causa_acidente)+1))
 
