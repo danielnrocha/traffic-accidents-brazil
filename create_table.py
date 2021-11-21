@@ -3,7 +3,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import mysql.connector as mysql
 import pandas as pd
-import numpy as np
 import logging
 
 # Logging Setup
@@ -22,8 +21,10 @@ def connect_to_db(schema, database):
     db_user = 'bd7bbf83ab7643'
     db_password = 'dfce7117'
     db_host = 'us-cdbr-east-04.cleardb.com'
+    db_port = '3306'
     
-    params = f'{db_user}:{db_password}@{db_host}/{schema}'
+    params = f'{db_user}:{db_password}@{db_host}:{db_port}/{schema}'
+    
     try:
         engine = create_engine("mysql+mysqlconnector://%s" % params, max_identifier_length=128, pool_size=1)
         engine.connect()
@@ -92,11 +93,10 @@ def create_tables():
         database='heroku_aba902d59bebc6b')
 
     cursor = db.cursor()
-
+    
     cursor.execute("""
                 CREATE TABLE acidente (
                     id_acidente INT(10),
-                    id_local INT(10),
                     id_pessoa INT(10),
                     id_veiculo INT(10),
                     data DATE,
@@ -119,6 +119,7 @@ def create_tables():
     cursor.execute("""
                 CREATE TABLE localidade (
                     id_local INT(10),
+                    id_acidente INT(10),
                     latitude FLOAT(10, 10),
                     longitude FLOAT(10, 10),
                     uf VARCHAR(2),
@@ -175,6 +176,7 @@ def create_tables():
 def group_data():
     """Group data from all the years available.
     """
+    
     por_pessoa_todos_tipos = pd.concat(list(map(lambda x: pd.read_csv(f'Downloads\\por_pessoa_todos tipos\\acidentes{x}_todas_causas_tipos.csv',
                                                     sep=';', encoding='latin-1'),
                             range(2017, 2022))), axis=0).replace('NA', pd.NA)
@@ -208,6 +210,8 @@ def restructure_data(por_pessoa_todos_tipos, por_pessoa, por_ocorrencia):
 
     df.drop(columns=['ilesos', 'feridos_graves', 'feridos_leves', 'mortos'], inplace=True)
 
+    df = df.loc[df['tipo_veiculo'] != 'Não Informado']
+    
     return df
 
 
@@ -217,18 +221,20 @@ def format_data(df):
     
     df.data = pd.to_datetime(df.data)
     # df.horario = pd.to_datetime(df.horario)
+    
     df.km = pd.to_numeric(df.km.str.replace(',', '.'))
+    df.latitude = pd.to_numeric(df.latitude.str.replace(',', '.'))
+    df.longitude = pd.to_numeric(df.longitude.str.replace(',', '.'))
     df.causa_principal = df.causa_principal.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
-    df.latitude = df.latitude.str.replace(',', '.')
-    df.longitude = df.longitude.str.replace(',', '.')
 
+    df.br = pd.to_numeric(df.br)
+    df.idade = pd.to_numeric(df.idade)
+    df.ano_fabricacao_veiculo = pd.to_numeric(df.ano_fabricacao_veiculo)
+    
     df.id_acidente = pd.to_numeric(df.id_acidente, downcast='integer')
     df.id_veiculo = pd.to_numeric(df.id_veiculo, downcast='integer')
-    df.pesid = pd.to_numeric(df.pesid, downcast='integer')
-    df.br = pd.to_numeric(df.br, downcast='integer')
+    df.id_pessoa = pd.to_numeric(df.id_pessoa, downcast='integer')
     df.ordem_tipo_acidente = pd.to_numeric(df.ordem_tipo_acidente, downcast='integer')
-    df.ano_fabricacao_veiculo = pd.to_numeric(df.ano_fabricacao_veiculo, downcast='integer')
-    df.idade = pd.to_numeric(df.idade, downcast='integer')
 
     return df
 
@@ -257,10 +263,10 @@ def split_dataframes(df):
     return acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo
 
 
-create_tables()
+# create_tables()
 df = restructure_data(group_data())
 df = format_data(df)
 populate_tables(split_dataframes(df))
 
-base = pd.read_csv('Downloads\\por_pessoa_todos tipos\\acidentes2007_todas_causas_tipos.csv', sep=';', encoding='latin-1')
-base[base['id']==18][['tipo_acidente', 'ordem_tipo_acidente', 'causa_acidente', 'causa_principal', 'id', 'pesid']]
+# base = pd.read_csv('Downloads\\por_pessoa_todos tipos\\acidentes2007_todas_causas_tipos.csv', sep=';', encoding='latin-1')
+# base[base['id']==18][['tipo_acidente', 'ordem_tipo_acidente', 'causa_acidente', 'causa_principal', 'id', 'pesid']]
