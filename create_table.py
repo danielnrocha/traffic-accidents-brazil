@@ -98,8 +98,11 @@ def create_tables():
     cursor.execute("""
                 CREATE TABLE acidente (
                     id_acidente INT(10),
+                    id_local INT(10),
                     id_pessoa INT(10),
                     id_veiculo INT(10),
+                    id_causa INT(10),
+                    id_tipo INT(10),
                     data DATE,
                     dia_semana VARCHAR(60),
                     horario TIME,
@@ -120,7 +123,6 @@ def create_tables():
     cursor.execute("""
                 CREATE TABLE localidade (
                     id_local INT(10),
-                    id_acidente INT(10),
                     latitude FLOAT(30, 30),
                     longitude FLOAT(30, 30),
                     uf VARCHAR(2),
@@ -158,7 +160,6 @@ def create_tables():
     cursor.execute("""
                 CREATE TABLE causa_acidente (
                     id_causa INT(10),
-                    id_acidente INT(10),
                     id_pessoa INT(10),
                     causa_acidente VARCHAR(60),
                     causa_principal BOOLEAN
@@ -167,7 +168,6 @@ def create_tables():
     cursor.execute("""
                 CREATE TABLE tipo_acidente (
                     id_tipo INT(10),
-                    id_acidente INT(10),
                     id_pessoa INT(10),
                     tipo_acidente VARCHAR(60),
                     ordem_tipo_acidente INT(10)
@@ -244,22 +244,26 @@ def split_dataframes(df):
     """Split data in different dataframes to fit the database model.
     """
     
-    acidente = df[['id_acidente', 'id_pessoa', 'id_veiculo', 'data', 'dia_semana', 'horario', 'classificacao_acidente', 
-                   'fase_dia', 'sentido_via', 'condicao_metereologica', 'qtd_pessoas', 'qtd_mortos', 'qtd_feridos_leves', 
-                   'qtd_feridos_graves', 'qtd_ilesos', 'qtd_ignorados', 'qtd_feridos', 'qtd_veiculos']]
-
-    localidade = df[['id_acidente','latitude', 'longitude', 'uf', 'municipio', 'br', 'km', 'tipo_pista', 'tracado_via', 'uso_solo', 'regional', 'delegacia', 'uop']]
+    localidade = df[['id_acidente', 'latitude', 'longitude', 'uf', 'municipio', 'br', 'km', 'tipo_pista', 'tracado_via', 'uso_solo', 'regional', 'delegacia', 'uop']].drop_duplicates()
     localidade.insert(0, 'id_local', range(1, len(localidade)+1))
     
     pessoa = df[['id_pessoa', 'idade', 'sexo', 'nacionalidade', 'naturalidade', 'tipo_envolvido', 'estado_fisico']].drop_duplicates()
 
-    tipo_acidente = df[['id_acidente', 'id_pessoa', 'tipo_acidente', 'ordem_tipo_acidente']]
-    tipo_acidente.insert(0, 'id_tipo', range(1, len(tipo_acidente)+1))
+    veiculo = df[['id_veiculo', 'id_pessoa', 'tipo_veiculo', 'marca', 'ano_fabricacao_veiculo']].drop_duplicates()
                                          
-    causa_acidente = df[['id_acidente', 'id_pessoa', 'causa_acidente', 'causa_principal']]
+    causa_acidente = df[['id_pessoa', 'causa_acidente', 'causa_principal']].drop_duplicates()
     causa_acidente.insert(0, 'id_causa', range(1, len(causa_acidente)+1))
     
-    veiculo = df[['id_veiculo', 'id_pessoa', 'tipo_veiculo', 'marca', 'ano_fabricacao_veiculo']].drop_duplicates()
+    tipo_acidente = df[['id_pessoa', 'tipo_acidente', 'ordem_tipo_acidente']].drop_duplicates()
+    tipo_acidente.insert(0, 'id_tipo', range(1, len(tipo_acidente)+1))
+    
+    acidente = df[['id_acidente', 'id_pessoa', 'id_veiculo', 'data', 'dia_semana', 'horario', 'classificacao_acidente',
+                   'fase_dia', 'sentido_via', 'condicao_metereologica', 'qtd_pessoas', 'qtd_mortos', 'qtd_feridos_leves',
+                   'qtd_feridos_graves', 'qtd_ilesos', 'qtd_ignorados', 'qtd_feridos', 'qtd_veiculos']].drop_duplicates()
+        
+    acidente = pd.merge(pd.merge(pd.merge(localidade[['id_acidente', 'id_local']], acidente).drop_duplicates(),
+                                 pd.merge(causa_acidente[['id_causa', 'id_pessoa']], acidente).drop_duplicates()).drop_duplicates(),
+                        pd.merge(tipo_acidente[['id_tipo', 'id_pessoa']], acidente).drop_duplicates()).drop_duplicates()
 
     return acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo
 
