@@ -75,6 +75,7 @@ def populate_tables(acidente, localidade, pessoa, tipo_acidente, causa_acidente,
     """Insert data in all the tables, after cleaning it.
     """
     
+    # O servidor no heroku nao suporta o tamanho do banco, precisei migrar para o AWS
     list(map(push_to_db, ['sys'] * 6, # ['heroku_aba902d59bebc6b'] * 6,
              ['acidente', 'localidade', 'pessoa', 'tipo_acidente', 'causa_acidente', 'veiculo'],
              [acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo]))
@@ -220,22 +221,21 @@ def format_data(df):
     """
     
     df.data = pd.to_datetime(df.data)
-    # df.horario = pd.to_datetime(df.horario)
     
     df.km = pd.to_numeric(df.km.str.replace(',', '.'))
     df.latitude = pd.to_numeric(df.latitude.str.replace(',', '.'))
     df.longitude = pd.to_numeric(df.longitude.str.replace(',', '.'))
-    df.causa_principal = df.causa_principal.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
     df.uso_solo = df.uso_solo.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
+    df.causa_principal = df.causa_principal.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
     
-    df.br = pd.to_numeric(df.br)
-    df.idade = pd.to_numeric(df.idade)
-    df.ano_fabricacao_veiculo = pd.to_numeric(df.ano_fabricacao_veiculo)
     
-    df.id_acidente = pd.to_numeric(df.id_acidente, downcast='integer')
-    df.id_veiculo = pd.to_numeric(df.id_veiculo, downcast='integer')
+    df.br = pd.to_numeric(df.br, downcast='integer')
+    df.idade = pd.to_numeric(df.idade, downcast='integer')
     df.id_pessoa = pd.to_numeric(df.id_pessoa, downcast='integer')
+    df.id_veiculo = pd.to_numeric(df.id_veiculo, downcast='integer')
+    df.id_acidente = pd.to_numeric(df.id_acidente, downcast='integer')
     df.ordem_tipo_acidente = pd.to_numeric(df.ordem_tipo_acidente, downcast='integer')
+    df.ano_fabricacao_veiculo = pd.to_numeric(df.ano_fabricacao_veiculo, downcast='integer')
 
     return df
 
@@ -249,18 +249,16 @@ def split_dataframes(df):
                    'qtd_feridos_graves', 'qtd_ilesos', 'qtd_ignorados', 'qtd_feridos', 'qtd_veiculos']]
 
     localidade = df[['id_acidente','latitude', 'longitude', 'uf', 'municipio', 'br', 'km', 'tipo_pista', 'tracado_via', 'uso_solo', 'regional', 'delegacia', 'uop']]
-    # localidade = localidade.assign(id_local=range(1, len(localidade)+1))
     localidade.insert(0, 'id_local', range(1, len(localidade)+1))
     
     pessoa = df[['id_pessoa', 'idade', 'sexo', 'nacionalidade', 'naturalidade', 'tipo_envolvido', 'estado_fisico']].drop_duplicates()
 
     tipo_acidente = df[['id_acidente', 'id_pessoa', 'tipo_acidente', 'ordem_tipo_acidente']]
-    tipo_acidente = tipo_acidente.assign(id_tipo=range(1, len(tipo_acidente)+1))
-    # tipo_acidente.insert(0, 'id_tipo', range(1, len(tipo_acidente)+1))
+    tipo_acidente.insert(0, 'id_tipo', range(1, len(tipo_acidente)+1))
                                          
     causa_acidente = df[['id_acidente', 'id_pessoa', 'causa_acidente', 'causa_principal']]
-    causa_acidente = causa_acidente.assign(id_causa=range(1, len(causa_acidente)+1))
-
+    causa_acidente.insert(0, 'id_causa', range(1, len(causa_acidente)+1))
+    
     veiculo = df[['id_veiculo', 'id_pessoa', 'tipo_veiculo', 'marca', 'ano_fabricacao_veiculo']].drop_duplicates()
 
     return acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo
