@@ -18,9 +18,10 @@ def connect_to_db(schema, database):
         database (str): MySQL table name (e.g. 'acidente').
     """
     
-    db_user = 'bd7bbf83ab7643'
-    db_password = 'dfce7117'
-    db_host = 'us-cdbr-east-04.cleardb.com'
+    # O servidor no heroku nao suporta o tamanho do banco, precisei migrar para o AWS
+    db_user = 'projetobd' # 'bd7bbf83ab7643'
+    db_password = '2yai9ivyWCqtEnQKp5R9' # 'dfce7117'
+    db_host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com' # 'us-cdbr-east-04.cleardb.com'
     db_port = '3306'
     
     params = f'{db_user}:{db_password}@{db_host}:{db_port}/{schema}'
@@ -74,7 +75,7 @@ def populate_tables(acidente, localidade, pessoa, tipo_acidente, causa_acidente,
     """Insert data in all the tables, after cleaning it.
     """
     
-    list(map(push_to_db, ['heroku_aba902d59bebc6b'] * 6,
+    list(map(push_to_db, ['sys'] * 6, # ['heroku_aba902d59bebc6b'] * 6,
              ['acidente', 'localidade', 'pessoa', 'tipo_acidente', 'causa_acidente', 'veiculo'],
              [acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo]))
     
@@ -83,11 +84,13 @@ def create_tables():
     """Create all tables: acidente, localidade, pessoa, veiculo, causa_acidente e tipo_acidente.
     """
     
+    # O servidor no heroku nao suporta o tamanho do banco, precisei migrar para o AWS
     db = mysql.connect(
-        host = "us-cdbr-east-04.cleardb.com",
-        user = "bd7bbf83ab7643",
-        password = "dfce7117",
-        database='heroku_aba902d59bebc6b')
+        host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com', # 'us-cdbr-east-04.cleardb.com'
+        user = 'projetobd', # 'bd7bbf83ab7643'
+        password = '2yai9ivyWCqtEnQKp5R9', # 'dfce7117'
+        database = 'sys', # 'heroku_aba902d59bebc6b'
+        port = '3306')
 
     cursor = db.cursor()
     
@@ -117,11 +120,11 @@ def create_tables():
                 CREATE TABLE localidade (
                     id_local INT(10),
                     id_acidente INT(10),
-                    latitude FLOAT(10, 10),
-                    longitude FLOAT(10, 10),
+                    latitude FLOAT(30, 30),
+                    longitude FLOAT(30, 30),
                     uf VARCHAR(2),
                     municipio VARCHAR(60),
-                    br FLOAT(5, 5),
+                    br INT(3),
                     km FLOAT(5, 5),
                     tipo_pista VARCHAR(60),
                     tracado_via VARCHAR(60),
@@ -264,9 +267,11 @@ def split_dataframes(df):
 
 
 # create_tables()
-df = restructure_data(group_data())
+por_pessoa_todos_tipos, por_pessoa, por_ocorrencia = group_data()
+df = restructure_data(por_pessoa_todos_tipos, por_pessoa, por_ocorrencia)
 df = format_data(df)
-populate_tables(split_dataframes(df))
+acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo = split_dataframes(df)
+populate_tables(acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo)
 
 # base = pd.read_csv('Downloads\\por_pessoa_todos tipos\\acidentes2007_todas_causas_tipos.csv', sep=';', encoding='latin-1')
 # base[base['id']==18][['tipo_acidente', 'ordem_tipo_acidente', 'causa_acidente', 'causa_principal', 'id', 'pesid']]
