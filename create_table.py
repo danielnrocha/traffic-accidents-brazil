@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 import mysql.connector as mysql
 import pandas as pd
 import logging
+import os
 
 # Logging Setup
 logging.basicConfig(level=logging.INFO,
@@ -18,8 +19,8 @@ def connect_to_db(schema, database):
         database (str): MySQL table name (e.g. 'acidente').
     """
     
-    db_user = 'projetobd'
-    db_password = '2yai9ivyWCqtEnQKp5R9'
+    db_user = os.environ.get('db_user')
+    db_password = os.environ.get('db_password')
     db_host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com'
     db_port = '3306'
     
@@ -85,8 +86,8 @@ def create_tables():
     
     db = mysql.connect(
         host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com',
-        user = 'projetobd',
-        password = '2yai9ivyWCqtEnQKp5R9',
+        user = os.environ.get('db_user'),
+        password = os.environ.get('db_password'),
         database = 'sys',
         port = '3306')
 
