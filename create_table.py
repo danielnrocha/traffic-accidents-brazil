@@ -121,12 +121,12 @@ def create_tables():
     cursor.execute("""
                 CREATE TABLE localidade (
                     id_local INT(10),
-                    latitude FLOAT(30, 30),
-                    longitude FLOAT(30, 30),
+                    latitude FLOAT,
+                    longitude FLOAT,
                     uf VARCHAR(2),
                     municipio VARCHAR(60),
                     br INT(3),
-                    km FLOAT(5, 5),
+                    km FLOAT,
                     tipo_pista VARCHAR(60),
                     tracado_via VARCHAR(60),
                     uso_solo BOOLEAN,
@@ -176,16 +176,15 @@ def group_data():
     """Group data from all the years available.
     """
     
-    por_pessoa_todos_tipos = pd.concat(list(map(lambda x: pd.read_csv(f'Downloads\\por_pessoa_todos tipos\\acidentes{x}_todas_causas_tipos.csv',
-                                                    sep=';', encoding='latin-1'),
+    por_pessoa_todos_tipos = pd.concat(list(map(lambda x: pd.read_csv(f'Downloads\\por_pessoa_todos tipos\\acidentes{x}_todas_causas_tipos.csv', 
+                                                                      sep=';', encoding='latin-1'),
                             range(2017, 2022))), axis=0).replace('NA', pd.NA)
 
-    por_pessoa = pd.concat(list(map(lambda x: pd.read_csv(f'Downloads\\por_pessoa\\acidentes{x}.csv',
-                                                    sep=';', encoding='latin-1'),
+    por_pessoa = pd.concat(list(map(lambda x: pd.read_csv(f'Downloads\\por_pessoa\\acidentes{x}.csv', encoding='latin-1', low_memory=False) if x <= 2015 
+                                    else pd.read_csv(f'Downloads\\por_pessoa\\acidentes{x}.csv', sep=';', encoding='latin-1', low_memory=False),
                             range(2007, 2022))), axis=0).replace('(null)', pd.NA).replace('NA', pd.NA)
 
-    por_ocorrencia = pd.concat(list(map(lambda x: pd.read_csv(f'Downloads\\por_ocorrencia\\datatran{x}.csv',
-                                                    sep=';', encoding='latin-1', low_memory=False),
+    por_ocorrencia = pd.concat(list(map(lambda x: pd.read_csv(f'Downloads\\por_ocorrencia\\datatran{x}.csv', sep=';', encoding='latin-1', low_memory=False),
                             range(2007, 2022))), axis=0).replace('(null)', pd.NA)
 
     return por_pessoa_todos_tipos, por_pessoa, por_ocorrencia
@@ -195,21 +194,21 @@ def restructure_data(por_pessoa_todos_tipos, por_pessoa, por_ocorrencia):
     """Select and rename columns and merge data.
     """
     
-    por_ocorrencia = por_ocorrencia[['id', 'pessoas', 'mortos', 'feridos_leves', 'feridos_graves', 'ilesos', 'ignorados', 'feridos', 'veiculos']]
+    por_ocorrencia = por_ocorrencia[['id', 'pessoas', 'mortos', 'feridos_leves', 'feridos_graves', 'ilesos', 'ignorados', 'feridos', 'veiculos']].drop_duplicates()
     por_ocorrencia = por_ocorrencia.rename(columns={'pessoas': 'qtd_pessoas', 'mortos': 'qtd_mortos', 'feridos_leves': 'qtd_feridos_leves',
                                                     'feridos_graves': 'qtd_feridos_graves', 'ilesos': 'qtd_ilesos', 'ignorados': 'qtd_ignorados',
                                                     'feridos': 'qtd_feridos', 'veiculos': 'qtd_veiculos'})
 
-    por_pessoa = por_pessoa[['pesid', 'nacionalidade', 'naturalidade']]
+    por_pessoa = por_pessoa[['pesid', 'nacionalidade', 'naturalidade']].drop_duplicates()
 
-    df = pd.merge(pd.merge(por_ocorrencia, por_pessoa_todos_tipos),
-                pd.merge(por_pessoa.dropna(how='all'), por_pessoa_todos_tipos))
+    df = pd.merge(pd.merge(por_ocorrencia, por_pessoa_todos_tipos.drop_duplicates()),
+                pd.merge(por_pessoa.dropna(how='all'), por_pessoa_todos_tipos)).drop_duplicates()
 
     df.rename(columns={'id': 'id_acidente', 'data_inversa': 'data', 'pesid': 'id_pessoa'}, inplace=True) 
 
     df.drop(columns=['ilesos', 'feridos_graves', 'feridos_leves', 'mortos'], inplace=True)
 
-    df = df.loc[df['tipo_veiculo'] != 'Não Informado']
+    df = df.loc[df['tipo_veiculo'] != 'Não Informado'].drop_duplicates()
     
     return df
 
@@ -240,14 +239,14 @@ def format_data(df):
 def split_dataframes(df):
     """Split data in different dataframes to fit the database model.
     """
-    
+
     localidade = df[['id_acidente', 'latitude', 'longitude', 'uf', 'municipio', 'br', 'km', 'tipo_pista', 'tracado_via', 'uso_solo', 'regional', 'delegacia', 'uop']].drop_duplicates()
     localidade.insert(0, 'id_local', range(1, len(localidade)+1))
-    
+
     pessoa = df[['id_pessoa', 'idade', 'sexo', 'nacionalidade', 'naturalidade', 'tipo_envolvido', 'estado_fisico']].drop_duplicates()
 
     veiculo = df[['id_veiculo', 'id_pessoa', 'tipo_veiculo', 'marca', 'ano_fabricacao_veiculo']].drop_duplicates()
-                                         
+
     causa_acidente = df[['id_pessoa', 'causa_acidente', 'causa_principal']].drop_duplicates()
     causa_acidente.insert(0, 'id_causa', range(1, len(causa_acidente)+1))
     
@@ -257,11 +256,13 @@ def split_dataframes(df):
     acidente = df[['id_acidente', 'id_pessoa', 'id_veiculo', 'data', 'dia_semana', 'horario', 'classificacao_acidente',
                    'fase_dia', 'sentido_via', 'condicao_metereologica', 'qtd_pessoas', 'qtd_mortos', 'qtd_feridos_leves',
                    'qtd_feridos_graves', 'qtd_ilesos', 'qtd_ignorados', 'qtd_feridos', 'qtd_veiculos']].drop_duplicates()
-        
+    
     acidente = pd.merge(pd.merge(pd.merge(localidade[['id_acidente', 'id_local']], acidente).drop_duplicates(),
                                  pd.merge(causa_acidente[['id_causa', 'id_pessoa']], acidente).drop_duplicates()).drop_duplicates(),
                         pd.merge(tipo_acidente[['id_tipo', 'id_pessoa']], acidente).drop_duplicates()).drop_duplicates()
 
+    localidade = localidade.drop(columns=['id_acidente']).drop_duplicates()
+    
     return acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo
 
 
