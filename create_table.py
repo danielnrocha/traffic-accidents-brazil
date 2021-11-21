@@ -18,10 +18,9 @@ def connect_to_db(schema, database):
         database (str): MySQL table name (e.g. 'acidente').
     """
     
-    # O servidor no heroku nao suporta o tamanho do banco, precisei migrar para o AWS
-    db_user = 'projetobd' # 'bd7bbf83ab7643'
-    db_password = '2yai9ivyWCqtEnQKp5R9' # 'dfce7117'
-    db_host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com' # 'us-cdbr-east-04.cleardb.com'
+    db_user = 'projetobd'
+    db_password = '2yai9ivyWCqtEnQKp5R9'
+    db_host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com'
     db_port = '3306'
     
     params = f'{db_user}:{db_password}@{db_host}:{db_port}/{schema}'
@@ -75,8 +74,7 @@ def populate_tables(acidente, localidade, pessoa, tipo_acidente, causa_acidente,
     """Insert data in all the tables, after cleaning it.
     """
     
-    # O servidor no heroku nao suporta o tamanho do banco, precisei migrar para o AWS
-    list(map(push_to_db, ['sys'] * 6, # ['heroku_aba902d59bebc6b'] * 6,
+    list(map(push_to_db, ['sys'] * 6,
              ['acidente', 'localidade', 'pessoa', 'tipo_acidente', 'causa_acidente', 'veiculo'],
              [acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo]))
     
@@ -85,12 +83,11 @@ def create_tables():
     """Create all tables: acidente, localidade, pessoa, veiculo, causa_acidente e tipo_acidente.
     """
     
-    # O servidor no heroku nao suporta o tamanho do banco, precisei migrar para o AWS
     db = mysql.connect(
-        host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com', # 'us-cdbr-east-04.cleardb.com'
-        user = 'projetobd', # 'bd7bbf83ab7643'
-        password = '2yai9ivyWCqtEnQKp5R9', # 'dfce7117'
-        database = 'sys', # 'heroku_aba902d59bebc6b'
+        host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com',
+        user = 'projetobd',
+        password = '2yai9ivyWCqtEnQKp5R9',
+        database = 'sys',
         port = '3306')
 
     cursor = db.cursor()
@@ -227,7 +224,6 @@ def format_data(df):
     df.longitude = pd.to_numeric(df.longitude.str.replace(',', '.'))
     df.uso_solo = df.uso_solo.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
     df.causa_principal = df.causa_principal.replace('Sim', True).replace('Não', False).replace('NÃ£o', False)
-    
     
     df.br = pd.to_numeric(df.br, downcast='integer')
     df.idade = pd.to_numeric(df.idade, downcast='integer')
