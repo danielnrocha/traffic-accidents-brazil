@@ -1,0 +1,9 @@
+This was made for Windows
+Install virtual env: pip install virtualenv
+Create virtual env: virtualenv traffic_env
+Activate virtual env: traffic_env\Scripts\activate
+Install ipykernel: pip install ipykernel
+Create new kernel: ipython kernel install --user --name=projectname
+Now, if there is no requirements.txt: Install whatever you need through: pip install package
+Else (requirements.txt exists): pip install -r requirements.txt
+Obs: if you're having problems intallings the packages, install pipwin: 'pip install pipwin' and then use 'pipwin' instead of 'pip' for what you need
