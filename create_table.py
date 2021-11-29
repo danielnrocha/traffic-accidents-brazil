@@ -2,6 +2,7 @@ from sqlalchemy.exc import OperationalError, DatabaseError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import mysql.connector as mysql
+from dotenv import load_dotenv
 import pandas as pd
 import logging
 import os
@@ -11,16 +12,18 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s",
                     handlers=[logging.StreamHandler()])
 
-def connect_to_db(schema, database):
+def connect_to_db(schema='sys', database='', return_df=True):
     """Query database and fetch table data.
 
-    Args:        
-        schema (str): MySQL table schema (e.g. 'heroku_aba902d59bebc6b').
-        database (str): MySQL table name (e.g. 'acidente').
+    Args:
+        schema (str): MySQL table schema. Default to 'sys'.
+        database (str): MySQL table name. Deafult to ''.
+        return_df (bool): Condition to return the dataframe.
     """
     
-    db_user = os.environ.get('db_user')
-    db_password = os.environ.get('db_password')
+    load_dotenv()
+    db_user = os.getenv("db_user")
+    db_password = os.getenv("db_password")
     db_host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com'
     db_port = '3306'
     
@@ -34,17 +37,23 @@ def connect_to_db(schema, database):
     except Exception:
         logging.error("%s - Could not connect to database", database)
 
-    db_tb = pd.read_sql(f"SELECT * FROM {schema}.{database}", session.bind)
+    if return_df == True:
+        
+        db_tb = pd.read_sql(f"SELECT * FROM {schema}.{database}", session.bind)
 
-    return db_tb, engine, session
+        return db_tb, engine, session
+
+    else:
+        
+        return engine, session
 
 
 def push_to_db(schema, database, dataframe):
     """Update database table with new data from 'diff'.
 
     Args:
-        schema (str): MySQL table schema (e.g. 'heroku_aba902d59bebc6b').
-        database (str): MySQL table name (e.g. 'acidente').
+        schema (str): MySQL table schema. Default to 'sys'.
+        database (str): MySQL table name. Deafult to ''.
         dataframe (df): dataframe to be inserted in the database (e.g. acidente)
     """
 
@@ -84,10 +93,11 @@ def create_tables():
     """Create all tables: acidente, localidade, pessoa, veiculo, causa_acidente e tipo_acidente.
     """
     
+    load_dotenv()
     db = mysql.connect(
         host = 'traffic-accidents.c1npf904zyic.sa-east-1.rds.amazonaws.com',
-        user = os.environ.get('db_user'),
-        password = os.environ.get('db_password'),
+        user = os.getenv("db_user"),
+        password = os.getenv("db_password"),
         database = 'sys',
         port = '3306')
 
@@ -266,12 +276,9 @@ def split_dataframes(df):
 
 
 if __name__=="__main__":
-    # create_tables()
+    create_tables()
     por_pessoa_todos_tipos, por_pessoa, por_ocorrencia = group_data()
     df = restructure_data(por_pessoa_todos_tipos, por_pessoa, por_ocorrencia)
     df = format_data(df)
     acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo = split_dataframes(df)
     populate_tables(acidente, localidade, pessoa, tipo_acidente, causa_acidente, veiculo)
-
-    # base = pd.read_csv('Downloads\\por_pessoa_todos tipos\\acidentes2007_todas_causas_tipos.csv', sep=';', encoding='latin-1')
-    # base[base['id']==18][['tipo_acidente', 'ordem_tipo_acidente', 'causa_acidente', 'causa_principal', 'id', 'pesid']]
