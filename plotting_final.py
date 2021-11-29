@@ -64,12 +64,12 @@ evolucao_media_abs_obitos_por_estado = pd.read_sql(f"""SELECT uf, AVG(qtd_mortos
                                                        GROUP BY uf, ano""", session.bind)
 
 br_states = gpd.read_file("br_states_geo.json")
+br_mun = gpd.read_file("br_mun_geo.json")
 
 def merge_geo_df(dataframe, geojson=br_states):
     
     return gpd.GeoDataFrame(dataframe.merge(right=geojson, left_on="uf", right_on="id", how="inner")).drop("id", axis=1)
-    
-    
+   
 geo_acidentes_por_estado = merge_geo_df(acidentes_por_estado)
 geo_vitimas_por_estado = merge_geo_df(vitimas_por_estado)
 geo_obitos_por_estado = merge_geo_df(obitos_por_estado)
@@ -81,6 +81,11 @@ geo_evolucao_obitos_por_estado = merge_geo_df(evolucao_obitos_por_estado)
 geo_evolucao_media_obitos_por_estado = merge_geo_df(evolucao_media_obitos_por_estado)
 geo_evolucao_media_abs_obitos_por_estado = merge_geo_df(evolucao_media_abs_obitos_por_estado)
 
+geo_acidentes_por_mun = merge_geo_df(acidentes_por_estado, br_mun)
+geo_vitimas_por_mun = merge_geo_df(vitimas_por_estado, br_mun)
+geo_obitos_por_mun = merge_geo_df(obitos_por_estado, br_mun)
+geo_media_obitos_por_mun = merge_geo_df(media_obitos_por_estado, br_mun)
+geo_media_abs_obitos_por_mun = merge_geo_df(media_abs_obitos_por_estado, br_mun)
 
 def plot_bubbles(geo_dataframe, column_to_size, column_to_color):
     
