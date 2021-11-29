@@ -7,6 +7,6 @@
 ### Metodologia:
 - Coletamos dados do [Kaggle](https://www.kaggle.com/mcamera/brazil-highway-traffic-accidents), obtidos originalmente da Polícia Rodoviária Federal (PRF)
 - Obtivemos o [GeoJson](https://www.kaggle.com/thiagobodruk/brazil-geojson) contendo as geometrias dos estados brasileiros (permite plotar os mapas)
-- Modelamos os dados em 6 tabelas (com as respectivas relações e chaves)
+- [Modelamos](modelagem.xlsx) os dados em 6 tabelas (com as respectivas relações e chaves)
 - Criamos o banco no AWS RDS e populamos as tabelas
 - Plotamos os gráficos usando GeoPandas e Matplotlib
