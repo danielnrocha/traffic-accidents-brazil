@@ -130,3 +130,6 @@ dmypy.json
 
 # 2Gb Database
 data/
+geodata/
+br_mun_geo.json
+br_states_geo.json
